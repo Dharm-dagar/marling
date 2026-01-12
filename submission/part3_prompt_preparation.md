@@ -13,55 +13,51 @@
 
 ---
 
+
 ## 3.1.1 Repository Context
 
-Beets is a command-line music library management application written in Python, designed specifically for music collectors who care about organizing their digital music properly. The core idea behind beets is simple but powerful: import your music once, let beets fix all the messy metadata, and keep your collection organized forever after that.
+Beets is a Python based command-line music library management program targeting music collectors who are concerned with how they arrange their digital music in their collections. The essence of beets is quite straightforward but mighty: once you have imported your music, beets should clean up all the sloppy metadata and then your collection would be structured eternally.
 
-The application works by scanning music files, matching them against online databases like MusicBrainz to fetch accurate metadata, applying consistent file naming patterns, and storing everything in a local SQLite database. Users interact with beets primarily through command-line commands like `beet import`, `beet ls`, and `beet modify`.
+It operates by scanning music files, comparing them with online databases such as MusicBrainz to obtain correct metadata, using standardized patterns of file names, and creating all of it into a local SQLite database. Beets are used by its users by issuing commandline instructions such as `beet import`, `beet ls` and `beet modify`.
 
-What makes beets stand out is its plugin architecture. The core application handles basic library management, but dozens of plugins extend functionality in various directions. There is a plugin for fetching lyrics, one for analyzing audio content, one for generating playlists, and many more. The web plugin specifically turns beets into a music server, exposing your library through a REST API that other applications can query.
+The outstanding feature of beets is its plugin architecture. The core application is the one that manages simple library tasks, yet there are dozens of extensions that are used to add functionality on different directions. It has a plug-in to get lyrics, one to analyze audio files, one to create playlists and many others. The web plugin in particular makes beets a music server, and opens up your library to a REST API that can be queried by other programs.
 
-The intended users are music enthusiasts who have large collections of MP3s, FLACs, or other audio formats and want to maintain accurate, consistent metadata across their entire library. These are typically technical users comfortable with command-line applications and configuration files. Some users run beets as a server component in home media setups, which is where the web plugin becomes essential.
+The target audience is people who love music and have large amounts of MP3s, FLACs, or any other audio files and desire to have consistent and accurate metadata of their entire library. They are usually technical users who are familiar with command-line applications and configuration files. There are users that have beets operate as a server component in home media systems, where the web plugin is required.
 
-The problem domain beets addresses is digital music organization, specifically the chaos that results from downloading music from various sources, each with inconsistent or incorrect tags. Beets brings order to this chaos through automated identification and tagging.
-
+The issue area that beets is dealing with is the organization of digital music, which is the mess that ensues due to downloading music of all kinds, each of them having different or wrong tags. Beets provides sanity to such disorder by automated identification and tagging.
 ---
 
 ## 3.1.2 Pull Request Description
 
-Pull request #3877 introduces a security enhancement to the beets web plugin by adding a read-only mode that restricts what HTTP operations clients can perform. This change directly responds to issue #3870, which highlighted that the web interface allows destructive operations like DELETE and PATCH by default, creating a potential risk when the interface is exposed on a network.
+Pull request #3877 provides a security improvement to the beets web plug-in by the addition of a read-only feature that limits the type of operations that clients can do with it. This is a direct reaction to issue #3870, which pointed out that the web interface would by default support destructive operations, such as DELETE and PATCH, which is potentially dangerous when the interface is published to networking.
 
-Before this PR, the web plugin accepted all HTTP methods without restriction. A user who started the web server with `beet web` would unknowingly expose an interface where any client on the network could delete items from their library or modify metadata. There was no built-in way to prevent this without setting up external access controls like a reverse proxy with authentication.
+Prior to this PR, the web plugin had no restriction on the type of HTTP methods it accepted. Anyone who had started the web server using `beet web` would be unaware that he or she was exposing an interface, which any client on the network could use to delete items on their library or update metadata. No inbuilt mechanism existed to discourage this without installing external access controls such as a reverse proxy with authentication.
 
-The changes this PR introduces center around a new configuration option called `readonly`. When this option is `true` (which is now the default), the plugin will reject any DELETE or PATCH request with a 405 Method Not Allowed response. GET requests for browsing and streaming music continue to work normally. Users who want to allow modifications must explicitly set `readonly: no` in their beets configuration file.
+The modifications this PR makes revolve around a new option of configuration that is the so-called `readonly`. When this is `true` (the default is now to make this true), then the plugin will decline every DELETE or PATCH request with the response 405 Method Not Allowed. Browsing and streaming music are also normal using get requests. Users wishing to permit modification need to explicitly configure beets as read-only by putting `readonly: no` in their beets configuration file.
 
-The previous behavior allowed all HTTP methods unconditionally. The new behavior blocks potentially destructive methods unless the user opts in. This follows security best practices where the safe option is the default and users must consciously enable risky features.
+The former policy was permissive to all HTTP methods. The new behavior prevents the possibility of destructive ways unless the user chooses to do so. This is in accordance with security best practices in which the default is the safest default and risky features have to be enabled by a user.
 
-This is technically a breaking change for anyone who was using DELETE or PATCH operations, but the discussion in issue #3870 concluded that security should take priority. The fix for affected users is straightforward: add one line to the configuration file.
+This is technically a breaking change to any user who had been using DELETE or PATCH operations, although the debate in issue #3870 concluded that security is more important. The solution to affected users is simple, one line should be added to the configuration file.
 
 ---
 
 ## 3.1.3 Acceptance Criteria
 
-✓ When a client sends a GET request to any web plugin endpoint, the request should be processed normally regardless of the `readonly` setting.
+✓ A client that sends a GET request to any endpoint of any web plugs must receive the request and process it as usual,  irrespective of the `readonly` setting.
 
-✓ When a client sends a DELETE request and `readonly` is `true` (default), the server should respond with HTTP 405 Method Not Allowed.
+✓ In the case of a client issuing a DELETE or PATCH request and with `readonly` having the value of `true` (the default), the server must issue an HTTP 405 Method Not Allowed response.
 
-✓ When a client sends a PATCH request and `readonly` is `true` (default), the server should respond with HTTP 405 Method Not Allowed.
+✓ On a request of a client with a DELETE or PATCH  request and the setting explicit like the `readonly` to `false`, the deletion should be carried out in the normal manner by the server.
 
-✓ When a client sends a DELETE request and `readonly` is explicitly set to `false`, the server should process the deletion normally.
+✓ The implementation is expected to read the `readonly` configuration setting in the beets config file under the web section.
 
-✓ When a client sends a PATCH request and `readonly` is explicitly set to `false`, the server should process the modification normally.
+✓ When not configured, the default value of the feature is `readonly` as which the default value is also `true`.
 
-✓ The implementation should read the `readonly` configuration option from the `web` section of the beets config file.
+✓ The documentation must specify clearly the option of `readonly`, its default and the way of disabling it.
 
-✓ The default value for `readonly` should be `true` when not specified in configuration.
+✓ All the tests that were already done on the web plugin must pass upon being adjusted to the new default behavior.
 
-✓ The documentation should clearly explain the `readonly` option, its default value, and how to disable it.
-
-✓ All existing tests for the web plugin should continue to pass after adjusting for the new default behavior.
-
-✓ New tests should verify the blocking behavior for DELETE and PATCH when readonly is enabled.
+✓ The behavior of the blocking of the DELETE and PATCH should be checked with new tests when the active mode is the readonly.
 
 ---
 
@@ -69,75 +65,75 @@ This is technically a breaking change for anyone who was using DELETE or PATCH o
 
 ### Edge Case 1: Missing Configuration Section
 
-When the user's configuration file has no `web` section at all, the plugin should still apply the `readonly: true` default. The implementation must handle the scenario where the config section doesn't exist without raising an error. This requires proper config initialization with default values.
+In case the configuration file of the user does not contain any `web` section at all, the default of the readonly should still be used by the plugin (`readonly:true`). The implementation should be able to cope with the situation when the config section is not present without creating an error. This necessitates default configuring.
 
 ### Edge Case 2: Invalid Configuration Value
 
-If a user sets `readonly: maybe` or some other non-boolean value, the plugin needs to handle this gracefully. Options include falling back to the safe default (true), raising a clear configuration error, or interpreting any truthy/falsy value according to YAML conventions.
+In the case when a user enters a non-boolean value such as `readonly : maybe`, the plugin must gracefully deal with it. There are the possibilities of a fall to the safe default (true), an explicit error of configuration, or any truthy/falsy value being interpreted based on YAML conventions.
 
 ### Edge Case 3: Other HTTP Methods
 
-The PR focuses on DELETE and PATCH, but what about PUT or POST? The implementation should be clear about which methods are blocked. If the web plugin adds new write endpoints in the future that use POST, the readonly flag's behavior should be documented to either cover all non-GET methods or explicitly list which methods it blocks.
+The PR is geared towards DELETE and Patch, and what of PUT or POST? The application must be clear on which methods are blocked. In the case that the web plugin has such new write endpoints in future, which are POST, the behavior of the readonly flag should be documented either to allow all non-GET operations, or explicitly to list the operations that are being blocked by the readonly flag.
 
 ### Edge Case 4: HEAD and OPTIONS Requests
 
-HEAD requests (which are like GET but without body) and OPTIONS requests (for CORS preflight) should probably be allowed even in readonly mode since they don't modify data. The implementation should consider these read-only methods and not block them.
+HEAD requests (not a GET but with no body) and OPTIONS requests (CORS preflight requests) should likely be permitted operating in the readonly mode as they do not alter data. These read-only methods should be taken into consideration during the implementation and not blocked.
 
-### Edge Case 5: Concurrent Configuration Changes
-
-If someone modifies the beets config file while the web server is running, the behavior regarding readonly could be confusing. The implementation should document whether config changes require a server restart or are picked up dynamically.
 
 ---
 
 ## 3.1.5 Initial Prompt
 
-You are implementing a security feature for the beets music library web plugin. The web plugin exposes a REST API that allows clients to browse, stream, modify, and delete items from a music library. Your task is to add a read-only mode that prevents destructive operations by default.
+This is a security feature you are implementing on the beets music library web plugin. The web-based plugin presents a REST API, which enables customers to access, stream, edit, and remove music in a music library. You are to modify it to include a read-only mode that does not allow any destructive operation.
 
 **Context:**
-Beets is a Python music library manager with a plugin architecture. The web plugin (located in `beetsplug/web.py`) uses Flask to provide HTTP endpoints. Currently, all HTTP methods are allowed on all endpoints, meaning anyone who can reach the web server can delete or modify library items.
+Beets is a Python library music manager that has a plug-in architecture. Fiasco The web plugin (found in `beetsplug/web.py`) uses Flask to offer endpoints through the HTTP protocol. Nowadays, all the HTTP methods are permitted on any endpoint, this is, anyone having access to the web server is allowed to delete or alter library items.
 
 **Requirements:**
 
-Implement a new configuration option called `readonly` under the `web` plugin section. This option should:
-- Default to `true` when not specified
-- Be read from the beets configuration system using `config['web']['readonly'].get(bool)`
-- Block DELETE and PATCH requests when enabled
-- Return HTTP 405 Method Not Allowed for blocked requests
-- Allow GET, HEAD, and OPTIONS requests regardless of the setting
+Add a new web configuration option known as the `readonly` in the `web` section. This option should:
+- default to `true` in case it is not mentioned.
+- It can be read with the configured system of beets with the help of the following method:
+- `config['web']['readonly'].get(bool)`
+- Delete and patch requests are blocked on by default.
+- BLOCKED Requests are not allowed to return HTTP 405 Method Not Allowed.
+- Permit GET requests, HEAD requests and OPTIONS requests in any setting.
 
 **Implementation Details:**
 
-1. Add the readonly check at the appropriate point in request handling. Consider using Flask's `before_request` decorator to intercept requests before they reach handlers.
+1. At the correct stage of request handling, add the check of being read only. It is possible to use the handlers `before_requests` are received by the handlers, which could be achieved with Flask using the before-request decorator.
 
-2. When a blocked method is detected, return a proper HTTP response:
-   - Status code: 405
-   - Include appropriate headers like `Allow: GET, HEAD, OPTIONS`
-   - Optionally include a message body explaining why the request was blocked
+2. In case of suspecting a blocked method, make a correct HTTP response:
+- Status code: 405
+- Incorporate the right headers, such as `Allow: GET, HEAD, OPTIONS`.
+- (Optional) add a message body stating the reason as to why the request was blocked.
 
-3. Read configuration using beets' config system. Handle the case where the `web` section or `readonly` option doesn't exist by defaulting to `true`.
+3. Beets configuration system Read configuration. Deal with the observation that the default of the `web` section or the `read only` option is not present by default.
+
+
+
 
 **Acceptance Criteria to Verify:**
 
-- GET requests work normally with readonly enabled
-- DELETE requests return 405 when readonly is true
-- DELETE requests succeed when readonly is false  
-- PATCH requests return 405 when readonly is true
-- PATCH requests succeed when readonly is false
-- Default behavior (no config specified) blocks DELETE and PATCH
+- GET requests work normally with readonly enabled.
+- DELETE and PATCH requests return 405 when readonly is true.
+- DELETE and PATCH requests succeed when readonly is false.
+- Default behavior (no config specified) blocks DELETE and PATCH.
 
 **Edge Cases to Handle:**
 
-- Configuration section missing entirely
-- Invalid boolean value in configuration
-- HEAD and OPTIONS methods should always be allowed
-- Document behavior clearly so users know how to enable write operations
+- Configuration section is not present at all.
+- Bogus configuration of falsehood.
+- HEAD, OPTIONS methods should never be prohibited.
+- Behaviors of documents should be documented in a manner that the user understands how to access the write operations.
 
 **Testing Requirements:**
 
-Add tests in `test/test_web.py` that verify:
-- Blocking behavior with readonly=true (explicit and default)
-- Allowing behavior with readonly=false
-- Correct HTTP status codes and headers
+Add tests in test/test_web.py which test:
+- Preventing behavior reading only (explicit and default)
+- Behavior that is also read-only allowable
+- Behavior may be read-only as well.
+- Proper HTTP status codes and headers.
 
 **Documentation Requirements:**
 
